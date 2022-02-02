@@ -1,0 +1,63 @@
+service: "todo-list-serverless"
+
+plugins:
+  - serverless-offline
+  - serverless-esbuild
+  - serverless-dynamodb-local
+
+custom:
+  dynamodb:
+    stages:
+      - dev
+      - local
+    start:
+      port: 8000
+      inMemory: true
+      migrate: true
+
+provider:
+  name: aws
+  runtime: nodejs14.x
+  region: sa-east-1
+  lambdaHashingVersion: "20201221"
+
+package:
+  individually: false
+  include:
+    - "./src/templates/**"
+
+functions:
+  createTodo:
+    handler: src/functions/createTodo.handle
+    events:
+      - http:
+          path: /createTodo/{user_id}
+          method: POST
+          cors: true
+  listTodos:
+    handler: src/functions/listTodos.handle
+    events:
+      - http:
+          path: /list/{user_id}
+          method: GET
+          cors: true
+
+resources:
+  Resources:
+    dbTodosUsers:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: users_todos
+        ProvisionedThroughput:
+          ReadCapacityUnits: 5
+          WriteCapacityUnits: 5
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+          - AttributeName: user_id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: user_id
+            KeyType: HASH
+          - AttributeName: id
+            KeyType: RANGE
